@@ -13,6 +13,18 @@ data "aws_availability_zones" "available" {}
 # Data source for current account number
 data "aws_caller_identity" "current" {}
 
+# Data source for main infrastructure state
+data "terraform_remote_state" "main" {
+  backend = "s3"
+
+  config {
+    bucket  = "infrastructure-severski"
+    key     = "terraform/infrastructure.tfstate"
+    region  = "us-west-2"
+    encrypt = "true"
+  }
+}
+
 /*
   --------------
   | S3 Bucket |
@@ -38,6 +50,12 @@ resource "aws_s3_bucket" "zestimate" {
 
 resource "aws_sns_topic" "zestimate_updates" {
   name = "zestimate-updates-topic"
+}
+
+resource "aws_sns_topic_subscription" "zestimate_updates" {
+  topic_arn = "${aws_sns_topic.zestimate_updates.arn}"
+  protocol  = "lambda"
+  endpoint  = "${data.terraform_remote_state.main.sns_to_pusher_lambda_arn}"
 }
 
 /*
@@ -83,7 +101,7 @@ data "aws_iam_policy_document" "policy" {
     actions = [
       "s3:DeleteObject",
       "s3:GetObject",
-      "s3:PutObject"
+      "s3:PutObject",
     ]
 
     resources = ["arn:aws:s3:::*"]
