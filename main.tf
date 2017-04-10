@@ -124,6 +124,14 @@ resource "aws_iam_role_policy_attachment" "lambda_worker_logs" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+resource "aws_lambda_permission" "allow_sns" {
+  statement_id  = "AllowExecutionFromSNS"
+  action        = "lambda:InvokeFunction"
+  function_name = "${aws_lambda_function.zestimate_update.arn}"
+  principal     = "sns.amazonaws.com"
+  source_arn    = "${aws_sns_topic.zestimate_updates.arn}"
+}
+
 output "lambda_role_arn" {
   value = "${aws_iam_role.lambda_worker.arn}"
 }
