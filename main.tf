@@ -142,14 +142,14 @@ output "lambda_role_arn" {
   ----------------------------
 */
 
-resource "aws_cloudwatch_event_rule" "daily" {
-  name                = "daily_zestimate_trigger"
-  description         = "Trigger Zestimate update Lambda on a daily basis"
-  schedule_expression = "rate(1 day)"
+resource "aws_cloudwatch_event_rule" "default" {
+  name                = "zestimate_trigger"
+  description         = "Trigger Zestimate update Lambda on a periodic basis"
+  schedule_expression = "rate(6 hours)"
 }
 
 resource "aws_cloudwatch_event_target" "default" {
-  rule      = "${aws_cloudwatch_event_rule.daily.name}"
+  rule      = "${aws_cloudwatch_event_rule.default.name}"
   target_id = "TriggerZestimateUpdate"
   arn       = "${aws_lambda_function.zestimate_update.arn}"
 }
@@ -159,7 +159,7 @@ resource "aws_lambda_permission" "from_cloudwatch_events" {
   action        = "lambda:InvokeFunction"
   function_name = "${aws_lambda_function.zestimate_update.arn}"
   principal     = "events.amazonaws.com"
-  source_arn    = "${aws_cloudwatch_event_rule.daily.arn}"
+  source_arn    = "${aws_cloudwatch_event_rule.default.arn}"
 }
 
 resource "aws_lambda_function" "zestimate_update" {
