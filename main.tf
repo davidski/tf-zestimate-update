@@ -35,9 +35,14 @@ data "terraform_remote_state" "main" {
 resource "aws_s3_bucket" "zestimate" {
   bucket = "zestimate-severski"
 
+  logging {
+    target_bucket = "${data.terraform_remote_state.main.auditlogs}"
+    target_prefix = "s3logs/zestimate-severski/"
+  }
+
   tags {
     Name       = "Zestimate data files"
-    project    = "zestimate"
+    project    = "${var.project}"
     managed_by = "Terraform"
   }
 }
@@ -55,7 +60,7 @@ resource "aws_sns_topic" "zestimate_updates" {
 resource "aws_sns_topic_subscription" "zestimate_updates" {
   topic_arn = "${aws_sns_topic.zestimate_updates.arn}"
   protocol  = "lambda"
-  endpoint  = "${data.terraform_remote_state.main.sns_to_pusher_lambda_arn}"
+  endpoint  = "${data.terraform_remote_state.main.sns_to_pushover_lambda_arn}"
 }
 
 /*

@@ -14,7 +14,7 @@ variable "vpc_cidr" {
 
 variable "project" {
   description = "Default value for project tag."
-  default     = "infrastructure"
+  default     = "zestimate"
 }
 
 variable "zpid" {
