@@ -185,4 +185,9 @@ resource "aws_lambda_function" "zestimate_update" {
       sns_topic_arn = "${aws_sns_topic.zestimate_updates.arn}"
     }
   }
+
+  tags {
+    project    = "${var.project}"
+    managed_by = "Terraform"
+  }
 }
