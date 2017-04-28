@@ -34,6 +34,12 @@ data "terraform_remote_state" "main" {
 # S3 location for zestimate data files
 resource "aws_s3_bucket" "zestimate" {
   bucket = "zestimate-severski"
+  
+  logging {
+    target_bucket = "${data.terraform_remote_state.main.auditlogs}"
+    target_prefix = "s3logs/zestimate-severski/"
+  }
+
 
   logging {
     target_bucket = "${data.terraform_remote_state.main.auditlogs}"
