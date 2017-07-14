@@ -180,7 +180,8 @@ resource "aws_lambda_function" "zestimate_update" {
   role          = "${aws_iam_role.lambda_worker.arn}"
   handler       = "main.lambda_handler"
   description   = "Check for updated home Zestimates"
-  runtime       = "python2.7"
+  runtime       = "python3.6"
+  timeout       = 5
 
   environment {
     variables = {
