@@ -1,7 +1,7 @@
 provider "aws" {
-  region  = "${var.aws_region}"
-  profile = "${var.aws_profile}"
-  version = "~> 1.54"
+  region  = var.aws_region
+  profile = var.aws_profile
+  version = "~> 2.0"
 
   assume_role {
     role_arn = "arn:aws:iam::754135023419:role/administrator-service"
@@ -18,7 +18,7 @@ data "aws_caller_identity" "current" {}
 data "terraform_remote_state" "main" {
   backend = "s3"
 
-  config {
+  config = {
     bucket  = "infrastructure-severski"
     key     = "terraform/infrastructure.tfstate"
     region  = "us-west-2"
@@ -37,19 +37,19 @@ resource "aws_s3_bucket" "zestimate" {
   bucket = "zestimate-severski"
 
   logging {
-    target_bucket = "${data.terraform_remote_state.main.auditlogs}"
+    target_bucket = data.terraform_remote_state.main.outputs.auditlogs
     target_prefix = "s3logs/zestimate-severski/"
   }
 
   logging {
-    target_bucket = "${data.terraform_remote_state.main.auditlogs}"
+    target_bucket = data.terraform_remote_state.main.outputs.auditlogs
     target_prefix = "s3logs/zestimate-severski/"
   }
 
-  tags {
+  tags = {
     Name       = "Zestimate data files"
-    project    = "${var.project}"
-    managed_by = "Terraform"
+    project    = var.project
+    managed_by = "terraform"
   }
 }
 
@@ -64,9 +64,9 @@ resource "aws_sns_topic" "zestimate_updates" {
 }
 
 resource "aws_sns_topic_subscription" "zestimate_updates" {
-  topic_arn = "${aws_sns_topic.zestimate_updates.arn}"
+  topic_arn = aws_sns_topic.zestimate_updates.arn
   protocol  = "lambda"
-  endpoint  = "${data.terraform_remote_state.main.sns_to_pushover_lambda_arn}"
+  endpoint  = data.terraform_remote_state.main.outputs.sns_to_pushover_lambda_arn
 }
 
 /*
@@ -103,7 +103,7 @@ data "aws_iam_policy_document" "policy" {
       "sns:Publish",
     ]
 
-    resources = ["${aws_sns_topic.zestimate_updates.arn}"]
+    resources = [aws_sns_topic.zestimate_updates.arn]
   }
 
   statement {
@@ -122,29 +122,29 @@ data "aws_iam_policy_document" "policy" {
 resource "aws_iam_policy" "policy" {
   name   = "lambda_zestimate_update"
   path   = "/"
-  policy = "${data.aws_iam_policy_document.policy.json}"
+  policy = data.aws_iam_policy_document.policy.json
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_worker" {
-  role       = "${aws_iam_role.lambda_worker.id}"
-  policy_arn = "${aws_iam_policy.policy.arn}"
+  role       = aws_iam_role.lambda_worker.id
+  policy_arn = aws_iam_policy.policy.arn
 }
 
 resource "aws_iam_role_policy_attachment" "lambda_worker_logs" {
-  role       = "${aws_iam_role.lambda_worker.id}"
+  role       = aws_iam_role.lambda_worker.id
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 resource "aws_lambda_permission" "allow_sns" {
   statement_id  = "AllowExecutionFromSNS"
   action        = "lambda:InvokeFunction"
-  function_name = "${aws_lambda_function.zestimate_update.arn}"
+  function_name = aws_lambda_function.zestimate_update.arn
   principal     = "sns.amazonaws.com"
-  source_arn    = "${aws_sns_topic.zestimate_updates.arn}"
+  source_arn    = aws_sns_topic.zestimate_updates.arn
 }
 
 output "lambda_role_arn" {
-  value = "${aws_iam_role.lambda_worker.arn}"
+  value = aws_iam_role.lambda_worker.arn
 }
 
 /*
@@ -160,24 +160,24 @@ resource "aws_cloudwatch_event_rule" "default" {
 }
 
 resource "aws_cloudwatch_event_target" "default" {
-  rule      = "${aws_cloudwatch_event_rule.default.name}"
+  rule      = aws_cloudwatch_event_rule.default.name
   target_id = "TriggerZestimateUpdate"
-  arn       = "${aws_lambda_function.zestimate_update.arn}"
+  arn       = aws_lambda_function.zestimate_update.arn
 }
 
 resource "aws_lambda_permission" "from_cloudwatch_events" {
   statement_id  = "AllowExecutionFromCWEvents"
   action        = "lambda:InvokeFunction"
-  function_name = "${aws_lambda_function.zestimate_update.arn}"
+  function_name = aws_lambda_function.zestimate_update.arn
   principal     = "events.amazonaws.com"
-  source_arn    = "${aws_cloudwatch_event_rule.default.arn}"
+  source_arn    = aws_cloudwatch_event_rule.default.arn
 }
 
 resource "aws_lambda_function" "zestimate_update" {
   s3_bucket     = "artifacts-severski"
   s3_key        = "lambdas/update-zestimate.zip"
   function_name = "update_zestimate"
-  role          = "${aws_iam_role.lambda_worker.arn}"
+  role          = aws_iam_role.lambda_worker.arn
   handler       = "main.lambda_handler"
   description   = "Check for updated home Zestimates"
   runtime       = "python3.6"
@@ -185,16 +185,16 @@ resource "aws_lambda_function" "zestimate_update" {
 
   environment {
     variables = {
-      zpid          = "${var.zpid}"
-      zwsid         = "${var.zwsid}"
-      bucket_name   = "${aws_s3_bucket.zestimate.id}"
-      bucket_key    = "${var.bucket_key}"
-      sns_topic_arn = "${aws_sns_topic.zestimate_updates.arn}"
+      zpid          = var.zpid
+      zwsid         = var.zwsid
+      bucket_name   = aws_s3_bucket.zestimate.id
+      bucket_key    = var.bucket_key
+      sns_topic_arn = aws_sns_topic.zestimate_updates.arn
     }
   }
 
-  tags {
-    project    = "${var.project}"
-    managed_by = "Terraform"
+  tags = {
+    project    = var.project
+    managed_by = "terraform"
   }
 }
